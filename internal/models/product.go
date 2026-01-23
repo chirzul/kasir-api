@@ -7,7 +7,7 @@ type Product struct {
 	Stock int    `json:"stock"`
 }
 
-var DummyProduct = []Product{
+var DummyProducts = []Product{
 	{
 		ID:    1,
 		Name:  "Indomie",

@@ -7,9 +7,9 @@ import (
 	"strconv"
 )
 
-func GetAllProduct(w http.ResponseWriter, r *http.Request) {
+func GetAllProducts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.DummyProduct)
+	json.NewEncoder(w).Encode(models.DummyProducts)
 }
 
 func AddProduct(w http.ResponseWriter, r *http.Request) {
@@ -20,14 +20,15 @@ func AddProduct(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid Request", http.StatusBadRequest)
 	}
 
-	newProduct.ID = len(models.DummyProduct) + 1
-	models.DummyProduct = append(models.DummyProduct, newProduct)
+	newProduct.ID = len(models.DummyProducts) + 1
+	models.DummyProducts = append(models.DummyProducts, newProduct)
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(models.DummyProduct)
+	json.NewEncoder(w).Encode(models.DummyProducts)
 }
 
 func GetProductByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -35,9 +36,8 @@ func GetProductByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, p := range models.DummyProduct {
+	for _, p := range models.DummyProducts {
 		if p.ID == id {
-			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(p)
 			return
 		}
@@ -47,6 +47,7 @@ func GetProductByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateProductByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -60,12 +61,11 @@ func UpdateProductByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid Request", http.StatusBadRequest)
 	}
 
-	for i := range models.DummyProduct {
-		if models.DummyProduct[i].ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			models.DummyProduct[i] = updatedProduct
-			models.DummyProduct[i].ID = id
-			json.NewEncoder(w).Encode(models.DummyProduct[i])
+	for i := range models.DummyProducts {
+		if models.DummyProducts[i].ID == id {
+			models.DummyProducts[i] = updatedProduct
+			models.DummyProducts[i].ID = id
+			json.NewEncoder(w).Encode(models.DummyProducts[i])
 			return
 		}
 	}
@@ -74,6 +74,7 @@ func UpdateProductByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteProductByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -87,11 +88,10 @@ func DeleteProductByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid Request", http.StatusBadRequest)
 	}
 
-	for i, p := range models.DummyProduct {
+	for i, p := range models.DummyProducts {
 		if p.ID == id {
-			models.DummyProduct = append(models.DummyProduct[:i], models.DummyProduct[i+1:]...)
+			models.DummyProducts = append(models.DummyProducts[:i], models.DummyProducts[i+1:]...)
 
-			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"message": "Success Delete"})
 			return
 		}
