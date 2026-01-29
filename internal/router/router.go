@@ -1,33 +1,38 @@
 package router
 
 import (
-	"kasir-api/internal/controllers"
+	"kasir-api/internal/handler"
+	"kasir-api/internal/repository"
 	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func SetupRouter() *http.ServeMux {
+func SetupRouter(pool *pgxpool.Pool) *http.ServeMux {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/health", handler.CheckHealth)
 
-	mux.HandleFunc("GET /api/health", controllers.CheckHealth)
-
-	registerProductsRoutes(mux)
-	registerCategoriesRoutes(mux)
+	queries := repository.New(pool)
+	registerProductsRoutes(mux, queries)
+	registerCategoriesRoutes(mux, queries)
 
 	return mux
 }
 
-func registerProductsRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/products", controllers.GetAllProducts)
-	mux.HandleFunc("POST /api/products", controllers.AddProduct)
-	mux.HandleFunc("GET /api/products/{id}", controllers.GetProductByID)
-	mux.HandleFunc("PUT /api/products/{id}", controllers.UpdateProductByID)
-	mux.HandleFunc("DELETE /api/products/{id}", controllers.DeleteProductByID)
+func registerProductsRoutes(mux *http.ServeMux, queries *repository.Queries) {
+	productHandler := handler.NewProductHandler(queries)
+
+	mux.HandleFunc("GET /api/products", productHandler.GetAllProducts)
+	mux.HandleFunc("POST /api/products", handler.AddProduct)
+	mux.HandleFunc("GET /api/products/{id}", handler.GetProductByID)
+	mux.HandleFunc("PUT /api/products/{id}", handler.UpdateProductByID)
+	mux.HandleFunc("DELETE /api/products/{id}", handler.DeleteProductByID)
 }
 
-func registerCategoriesRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/categories", controllers.GetAllCategories)
-	mux.HandleFunc("POST /api/categories", controllers.AddCategory)
-	mux.HandleFunc("GET /api/categories/{id}", controllers.GetCategoryByID)
-	mux.HandleFunc("PUT /api/categories/{id}", controllers.UpdateCategoryByID)
-	mux.HandleFunc("DELETE /api/categories/{id}", controllers.DeleteCategoryByID)
+func registerCategoriesRoutes(mux *http.ServeMux, queries *repository.Queries) {
+	mux.HandleFunc("GET /api/categories", handler.GetAllCategories)
+	mux.HandleFunc("POST /api/categories", handler.AddCategory)
+	mux.HandleFunc("GET /api/categories/{id}", handler.GetCategoryByID)
+	mux.HandleFunc("PUT /api/categories/{id}", handler.UpdateCategoryByID)
+	mux.HandleFunc("DELETE /api/categories/{id}", handler.DeleteCategoryByID)
 }

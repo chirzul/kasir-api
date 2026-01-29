@@ -1,15 +1,26 @@
-package controllers
+package handler
 
 import (
 	"encoding/json"
 	"kasir-api/internal/models"
+	"kasir-api/internal/repository"
+	"kasir-api/internal/service"
 	"net/http"
 	"strconv"
 )
 
-func GetAllProducts(w http.ResponseWriter, r *http.Request) {
+type ProductHandler struct {
+	s service.ProductService
+}
+
+func NewProductHandler(q *repository.Queries) *ProductHandler {
+	return &ProductHandler{s: service.NewProductService(q)}
+}
+
+func (h *ProductHandler) GetAllProducts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.DummyProducts)
+	products, _ := h.s.GetAllProducts(r.Context())
+	json.NewEncoder(w).Encode(products)
 }
 
 func AddProduct(w http.ResponseWriter, r *http.Request) {
