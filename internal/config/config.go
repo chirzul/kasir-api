@@ -14,7 +14,6 @@ type Config struct {
 func Load() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.SetConfigType("env")
-	viper.AutomaticEnv()
 
 	// Optional defaults
 	viper.SetDefault("APP_PORT", "8080")
@@ -22,6 +21,8 @@ func Load() (*Config, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Println("no .env file found, using env vars")
 	}
+
+	viper.AutomaticEnv()
 
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
