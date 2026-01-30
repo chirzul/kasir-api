@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -14,19 +13,19 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	fmt.Println("PORT: ", os.Getenv("PORT"))
-	fmt.Println("DBURL: ", os.Getenv("DATABASE_URL"))
+
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	viper.SetConfigFile(".env")
-	viper.SetConfigType("env")
-	_ = viper.ReadInConfig()
-
-	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, err
+	if _, err := os.Stat(".env"); err == nil {
+		viper.SetConfigFile(".env")
+		_ = viper.ReadInConfig()
 	}
 
-	return &cfg, nil
+	config := Config{
+		AppPort: viper.GetString("PORT"),
+		DBURL:   viper.GetString("DATABASE_URL"),
+	}
+
+	return &config, nil
 }
