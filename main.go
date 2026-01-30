@@ -25,8 +25,8 @@ func main() {
 
 	mux := router.SetupRouter(pool)
 
-	fmt.Println("Server running at :8080")
-	err = http.ListenAndServe(":8080", mux)
+	fmt.Println("Server running at :", cfg.AppPort)
+	err = http.ListenAndServe(fmt.Sprintf(":%s", cfg.AppPort), mux)
 	if err != nil {
 		fmt.Println("error running server")
 	}
