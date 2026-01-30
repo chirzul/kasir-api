@@ -14,14 +14,14 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	fmt.Println("PORT: ", os.Getenv("PORT"))
 	fmt.Println("DBURL: ", os.Getenv("DATABASE_URL"))
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	viper.SetConfigFile(".env")
 	viper.SetConfigType("env")
-	viper.ReadInConfig()
+	_ = viper.ReadInConfig()
 
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
