@@ -9,9 +9,7 @@ import (
 )
 
 func InitPostgresDB(ctx context.Context, config *config.Config) (*pgxpool.Pool, error) {
-	dsn := config.DBURL
-
-	cfg, err := pgxpool.ParseConfig(dsn)
+	cfg, err := pgxpool.ParseConfig(config.DBURL)
 	if err != nil {
 		return nil, err
 	}

@@ -8,24 +8,26 @@ import (
 )
 
 type Config struct {
-	AppPort string `mapstructure:"PORT"`
-	DBURL   string `mapstructure:"DATABASE_URL"`
+	AppPort string
+	DBURL   string
 }
 
-func Load() (*Config, error) {
-
+func Load() *Config {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	if _, err := os.Stat(".env"); err == nil {
+	if envFileExists(".env") {
 		viper.SetConfigFile(".env")
-		_ = viper.ReadInConfig()
+		viper.ReadInConfig()
 	}
 
-	config := Config{
+	return &Config{
 		AppPort: viper.GetString("PORT"),
 		DBURL:   viper.GetString("DATABASE_URL"),
 	}
+}
 
-	return &config, nil
+func envFileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

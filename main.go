@@ -2,32 +2,58 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"kasir-api/internal/config"
 	"kasir-api/internal/database"
 	"kasir-api/internal/router"
-	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	ctx := context.Background()
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cfg := config.Load()
 
 	pool, err := database.InitPostgresDB(ctx, cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to connect database")
 	}
 	defer pool.Close()
 
 	mux := router.SetupRouter(pool)
 
-	fmt.Println("Server running at :", cfg.AppPort)
-	err = http.ListenAndServe(fmt.Sprintf(":%s", cfg.AppPort), mux)
-	if err != nil {
-		fmt.Println("error running server")
+	server := &http.Server{
+		Addr:    ":" + cfg.AppPort,
+		Handler: mux,
+	}
+
+	go func() {
+		log.Info().
+			Str("port", cfg.AppPort).
+			Msg("HTTP server started")
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("server crashed")
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Info().Msg("shutdown signal received")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Error().Err(err).Msg("graceful shutdown failed")
+	} else {
+		log.Info().Msg("server stopped gracefully")
 	}
 }
