@@ -8,6 +8,7 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -27,14 +28,13 @@ func (q *Queries) AddCategory(ctx context.Context, arg AddCategoryParams) error 
 	return err
 }
 
-const deleteCategoryById = `-- name: DeleteCategoryById :exec
+const deleteCategoryById = `-- name: DeleteCategoryById :execresult
 DELETE FROM categories
 WHERE id = $1
 `
 
-func (q *Queries) DeleteCategoryById(ctx context.Context, id string) error {
-	_, err := q.db.Exec(ctx, deleteCategoryById, id)
-	return err
+func (q *Queries) DeleteCategoryById(ctx context.Context, id string) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, deleteCategoryById, id)
 }
 
 const getAllCategories = `-- name: GetAllCategories :many
@@ -94,21 +94,21 @@ func (q *Queries) GetCategoryById(ctx context.Context, id string) (GetCategoryBy
 	return i, err
 }
 
-const updateCategoryById = `-- name: UpdateCategoryById :exec
+const updateCategoryById = `-- name: UpdateCategoryById :execresult
 UPDATE categories
 SET
-  name = COALESCE($2, name),
-  description = COALESCE($3, description)
-WHERE id = $1
+  name = $1,
+  description = $2,
+  updated_at = now()
+WHERE id = $3
 `
 
 type UpdateCategoryByIdParams struct {
-	ID          string
-	Name        pgtype.Text
+	Name        string
 	Description pgtype.Text
+	ID          string
 }
 
-func (q *Queries) UpdateCategoryById(ctx context.Context, arg UpdateCategoryByIdParams) error {
-	_, err := q.db.Exec(ctx, updateCategoryById, arg.ID, arg.Name, arg.Description)
-	return err
+func (q *Queries) UpdateCategoryById(ctx context.Context, arg UpdateCategoryByIdParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, updateCategoryById, arg.Name, arg.Description, arg.ID)
 }

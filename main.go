@@ -4,17 +4,25 @@ import (
 	"context"
 	"kasir-api/internal/config"
 	"kasir-api/internal/database"
+	"kasir-api/internal/handler"
+	"kasir-api/internal/repository"
 	"kasir-api/internal/router"
+	"kasir-api/internal/service"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{
+		Out: os.Stdout,
+	})
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -26,19 +34,28 @@ func main() {
 	}
 	defer pool.Close()
 
-	mux := router.SetupRouter(pool)
+	app := fiber.New()
 
-	server := &http.Server{
-		Addr:    ":" + cfg.AppPort,
-		Handler: mux,
+	repository := repository.New(pool)
+
+	productService := service.NewProductService(repository)
+	productHandler := handler.NewProductHandler(productService)
+
+	categoryService := service.NewCategoryService(repository)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
+
+	handlers := &router.Handlers{
+		ProductHandler:  productHandler,
+		CategoryHandler: categoryHandler,
 	}
+	router.RegisterRoutes(app, handlers)
 
 	go func() {
 		log.Info().
 			Str("port", cfg.AppPort).
 			Msg("HTTP server started")
 
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := app.Listen(":" + cfg.AppPort); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).Msg("server crashed")
 		}
 	}()
@@ -48,10 +65,7 @@ func main() {
 	<-quit
 	log.Info().Msg("shutdown signal received")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := app.Shutdown(); err != nil {
 		log.Error().Err(err).Msg("graceful shutdown failed")
 	} else {
 		log.Info().Msg("server stopped gracefully")

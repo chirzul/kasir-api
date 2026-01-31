@@ -1,101 +1,145 @@
 package handler
 
 import (
-	"encoding/json"
-	"kasir-api/internal/models"
-	"net/http"
-	"strconv"
+	"errors"
+	"kasir-api/internal/dto"
+	"kasir-api/internal/pkg/utils"
+	"kasir-api/internal/service"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 )
 
-func GetAllCategories(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.DummyCategories)
+type CategoryHandler struct {
+	service service.CategoryService
 }
 
-func AddCategory(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	var newCategory models.Category
-	err := json.NewDecoder(r.Body).Decode(&newCategory)
-	if err != nil {
-		http.Error(w, "Invalid Request", http.StatusBadRequest)
-	}
-
-	newCategory.ID = len(models.DummyCategories) + 1
-	models.DummyCategories = append(models.DummyCategories, newCategory)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(models.DummyCategories)
+func NewCategoryHandler(s service.CategoryService) *CategoryHandler {
+	return &CategoryHandler{service: s}
 }
 
-func GetCategoryByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid Category ID", http.StatusBadRequest)
-		return
+func (h *CategoryHandler) GetAllCategories(c *fiber.Ctx) error {
+	categories, err := h.service.GetAllCategories(c.Context())
+	if errors.Is(err, utils.ErrNotFound) {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"statusCode": fiber.StatusNotFound,
+			"statusDesc": "NOT_FOUND",
+		})
 	}
 
-	for _, p := range models.DummyCategories {
-		if p.ID == id {
-			json.NewEncoder(w).Encode(p)
-			return
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"statusCode": fiber.StatusInternalServerError,
+			"statusDesc": "INTERNAL_SERVER_ERROR",
+			"error":      err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+		"data":       categories,
+	})
+}
+
+func (h *CategoryHandler) GetCategoryByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	category, err := h.service.GetCategoryById(c.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, utils.ErrNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"statusCode": fiber.StatusNotFound,
+				"statusDesc": "NOT_FOUND",
+				"error":      err.Error(),
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"statusCode": fiber.StatusInternalServerError,
+				"statusDesc": "INTERNAL_SERVER_ERROR",
+				"error":      err.Error(),
+			})
 		}
 	}
 
-	http.Error(w, "Category Not Found", http.StatusNotFound)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+		"data":       category,
+	})
 }
 
-func UpdateCategoryByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid Category ID", http.StatusBadRequest)
-		return
+func (h *CategoryHandler) AddCategory(c *fiber.Ctx) error {
+	var req dto.AddCategoryRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"statusCode": fiber.StatusBadRequest,
+			"statusDesc": "BAD_REQUEST",
+			"error":      err.Error(),
+		})
 	}
 
-	var updatedCategory models.Category
-	err = json.NewDecoder(r.Body).Decode(&updatedCategory)
-	if err != nil {
-		http.Error(w, "Invalid Request", http.StatusBadRequest)
+	if err := h.service.AddCategory(c.Context(), req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"statusCode": fiber.StatusInternalServerError,
+			"statusDesc": "INTERNAL_SERVER_ERROR",
+			"error":      err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"statusCode": fiber.StatusCreated,
+		"statusDesc": "CREATED",
+	})
+}
+
+func (h *CategoryHandler) UpdateCategoryByID(c *fiber.Ctx) error {
+	var req dto.UpdateCategoryRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"statusCode": fiber.StatusBadRequest,
+			"statusDesc": "BAD_REQUEST",
+			"error":      err.Error(),
+		})
 	}
 
-	for i := range models.DummyCategories {
-		if models.DummyCategories[i].ID == id {
-			models.DummyCategories[i] = updatedCategory
-			models.DummyCategories[i].ID = id
-			json.NewEncoder(w).Encode(models.DummyCategories[i])
-			return
+	req.ID = c.Params("id")
+	if err := h.service.UpdateCategoryById(c.Context(), req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"statusCode": fiber.StatusInternalServerError,
+			"statusDesc": "INTERNAL_SERVER_ERROR",
+			"error":      err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+	})
+}
+
+func (h *CategoryHandler) DeleteCategoryByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	err := h.service.DeleteCategoryById(c.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"statusCode": fiber.StatusNotFound,
+				"statusDesc": "NOT_FOUND",
+				"error":      err.Error(),
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"statusCode": fiber.StatusInternalServerError,
+				"statusDesc": "INTERNAL_SERVER_ERROR",
+				"error":      err.Error(),
+			})
 		}
 	}
 
-	http.Error(w, "Category Not Found", http.StatusNotFound)
-}
-
-func DeleteCategoryByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid Category ID", http.StatusBadRequest)
-		return
-	}
-
-	var updatedCategory models.Category
-	err = json.NewDecoder(r.Body).Decode(&updatedCategory)
-	if err != nil {
-		http.Error(w, "Invalid Request", http.StatusBadRequest)
-	}
-
-	for i, p := range models.DummyCategories {
-		if p.ID == id {
-			models.DummyCategories = append(models.DummyCategories[:i], models.DummyCategories[i+1:]...)
-
-			json.NewEncoder(w).Encode(map[string]string{"message": "Success Delete"})
-			return
-		}
-	}
-
-	http.Error(w, "Category Not Found", http.StatusNotFound)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+	})
 }

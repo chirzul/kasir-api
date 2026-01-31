@@ -8,6 +8,7 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -33,14 +34,13 @@ func (q *Queries) AddProduct(ctx context.Context, arg AddProductParams) error {
 	return err
 }
 
-const deleteProductById = `-- name: DeleteProductById :exec
+const deleteProductById = `-- name: DeleteProductById :execresult
 DELETE FROM products
 WHERE id = $1
 `
 
-func (q *Queries) DeleteProductById(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteProductById, id)
-	return err
+func (q *Queries) DeleteProductById(ctx context.Context, id int64) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, deleteProductById, id)
 }
 
 const getAllProducts = `-- name: GetAllProducts :many
@@ -127,28 +127,31 @@ func (q *Queries) GetProductById(ctx context.Context, id int64) (GetProductByIdR
 	return i, err
 }
 
-const updateProductById = `-- name: UpdateProductById :exec
+const updateProductById = `-- name: UpdateProductById :execresult
 UPDATE products
 SET
-  name = COALESCE($2, name),
-  price = COALESCE($3, price),
-  stock = COALESCE($4, stock)
-WHERE id = $1
+  name = $1,
+  price = $2,
+  stock = $3,
+  category_id = $4,
+  updated_at = now()
+WHERE id = $5
 `
 
 type UpdateProductByIdParams struct {
-	ID    int64
-	Name  pgtype.Text
-	Price pgtype.Numeric
-	Stock pgtype.Int2
+	Name       string
+	Price      pgtype.Numeric
+	Stock      int16
+	CategoryID string
+	ID         int64
 }
 
-func (q *Queries) UpdateProductById(ctx context.Context, arg UpdateProductByIdParams) error {
-	_, err := q.db.Exec(ctx, updateProductById,
-		arg.ID,
+func (q *Queries) UpdateProductById(ctx context.Context, arg UpdateProductByIdParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, updateProductById,
 		arg.Name,
 		arg.Price,
 		arg.Stock,
+		arg.CategoryID,
+		arg.ID,
 	)
-	return err
 }

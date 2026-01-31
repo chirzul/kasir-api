@@ -25,14 +25,16 @@ WHERE p.id = $1;
 INSERT INTO products (name, price, stock, category_id)
 VALUES ($1, $2, $3, $4);
 
--- name: UpdateProductById :exec
+-- name: UpdateProductById :execresult
 UPDATE products
 SET
-  name = COALESCE(sqlc.narg(name), name),
-  price = COALESCE(sqlc.narg(price), price),
-  stock = COALESCE(sqlc.narg(stock), stock)
-WHERE id = $1;
+  name = $1,
+  price = $2,
+  stock = $3,
+  category_id = $4,
+  updated_at = now()
+WHERE id = $5;
 
--- name: DeleteProductById :exec
+-- name: DeleteProductById :execresult
 DELETE FROM products
 WHERE id = $1;

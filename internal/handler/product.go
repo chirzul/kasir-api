@@ -1,112 +1,145 @@
 package handler
 
 import (
-	"encoding/json"
-	"kasir-api/internal/models"
-	"kasir-api/internal/repository"
+	"errors"
+	"kasir-api/internal/dto"
+	"kasir-api/internal/pkg/utils"
 	"kasir-api/internal/service"
-	"net/http"
-	"strconv"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 )
 
 type ProductHandler struct {
-	s service.ProductService
+	service service.ProductService
 }
 
-func NewProductHandler(q *repository.Queries) *ProductHandler {
-	return &ProductHandler{s: service.NewProductService(q)}
+func NewProductHandler(s service.ProductService) *ProductHandler {
+	return &ProductHandler{service: s}
 }
 
-func (h *ProductHandler) GetAllProducts(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	products, _ := h.s.GetAllProducts(r.Context())
-	json.NewEncoder(w).Encode(products)
-}
-
-func AddProduct(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	var newProduct models.Product
-	err := json.NewDecoder(r.Body).Decode(&newProduct)
-	if err != nil {
-		http.Error(w, "Invalid Request", http.StatusBadRequest)
+func (h *ProductHandler) GetAllProducts(c *fiber.Ctx) error {
+	products, err := h.service.GetAllProducts(c.Context())
+	if errors.Is(err, utils.ErrNotFound) {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"statusCode": fiber.StatusNotFound,
+			"statusDesc": "NOT_FOUND",
+		})
 	}
 
-	newProduct.ID = len(models.DummyProducts) + 1
-	models.DummyProducts = append(models.DummyProducts, newProduct)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(models.DummyProducts)
-}
-
-func GetProductByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid Product ID", http.StatusBadRequest)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"statusCode": fiber.StatusInternalServerError,
+			"statusDesc": "INTERNAL_SERVER_ERROR",
+			"error":      err.Error(),
+		})
 	}
 
-	for _, p := range models.DummyProducts {
-		if p.ID == id {
-			json.NewEncoder(w).Encode(p)
-			return
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+		"data":       products,
+	})
+}
+
+func (h *ProductHandler) GetProductByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	product, err := h.service.GetProductById(c.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, utils.ErrNotFound):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"statusCode": fiber.StatusNotFound,
+				"statusDesc": "NOT_FOUND",
+				"error":      err.Error(),
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"statusCode": fiber.StatusInternalServerError,
+				"statusDesc": "INTERNAL_SERVER_ERROR",
+				"error":      err.Error(),
+			})
 		}
 	}
 
-	http.Error(w, "Product Not Found", http.StatusNotFound)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+		"data":       product,
+	})
 }
 
-func UpdateProductByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid Product ID", http.StatusBadRequest)
-		return
+func (h *ProductHandler) AddProduct(c *fiber.Ctx) error {
+	var req dto.AddProductRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"statusCode": fiber.StatusBadRequest,
+			"statusDesc": "BAD_REQUEST",
+			"error":      err.Error(),
+		})
 	}
 
-	var updatedProduct models.Product
-	err = json.NewDecoder(r.Body).Decode(&updatedProduct)
-	if err != nil {
-		http.Error(w, "Invalid Request", http.StatusBadRequest)
+	if err := h.service.AddProduct(c.Context(), req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"statusCode": fiber.StatusInternalServerError,
+			"statusDesc": "INTERNAL_SERVER_ERROR",
+			"error":      err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"statusCode": fiber.StatusCreated,
+		"statusDesc": "CREATED",
+	})
+}
+
+func (h *ProductHandler) UpdateProductByID(c *fiber.Ctx) error {
+	var req dto.UpdateProductRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"statusCode": fiber.StatusBadRequest,
+			"statusDesc": "BAD_REQUEST",
+			"error":      err.Error(),
+		})
 	}
 
-	for i := range models.DummyProducts {
-		if models.DummyProducts[i].ID == id {
-			models.DummyProducts[i] = updatedProduct
-			models.DummyProducts[i].ID = id
-			json.NewEncoder(w).Encode(models.DummyProducts[i])
-			return
+	req.ID = c.Params("id")
+	if err := h.service.UpdateProductById(c.Context(), req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"statusCode": fiber.StatusInternalServerError,
+			"statusDesc": "INTERNAL_SERVER_ERROR",
+			"error":      err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+	})
+}
+
+func (h *ProductHandler) DeleteProductByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	err := h.service.DeleteProductById(c.Context(), id)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"statusCode": fiber.StatusNotFound,
+				"statusDesc": "NOT_FOUND",
+				"error":      err.Error(),
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"statusCode": fiber.StatusInternalServerError,
+				"statusDesc": "INTERNAL_SERVER_ERROR",
+				"error":      err.Error(),
+			})
 		}
 	}
 
-	http.Error(w, "Product Not Found", http.StatusNotFound)
-}
-
-func DeleteProductByID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid Product ID", http.StatusBadRequest)
-		return
-	}
-
-	var updatedProduct models.Product
-	err = json.NewDecoder(r.Body).Decode(&updatedProduct)
-	if err != nil {
-		http.Error(w, "Invalid Request", http.StatusBadRequest)
-	}
-
-	for i, p := range models.DummyProducts {
-		if p.ID == id {
-			models.DummyProducts = append(models.DummyProducts[:i], models.DummyProducts[i+1:]...)
-
-			json.NewEncoder(w).Encode(map[string]string{"message": "Success Delete"})
-			return
-		}
-	}
-
-	http.Error(w, "Product Not Found", http.StatusNotFound)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"statusCode": fiber.StatusOK,
+		"statusDesc": "OK",
+	})
 }

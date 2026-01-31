@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/tracelog"
+	"github.com/rs/zerolog/log"
 )
 
 func InitPostgresDB(ctx context.Context, config *config.Config) (*pgxpool.Pool, error) {
@@ -14,6 +16,26 @@ func InitPostgresDB(ctx context.Context, config *config.Config) (*pgxpool.Pool, 
 		return nil, err
 	}
 
+	cfg.ConnConfig.Tracer = &tracelog.TraceLog{
+		Logger: tracelog.LoggerFunc(func(
+			ctx context.Context,
+			level tracelog.LogLevel,
+			msg string,
+			data map[string]any,
+		) {
+			switch level {
+			case tracelog.LogLevelDebug:
+				log.Debug().Fields(data).Msg(msg)
+			case tracelog.LogLevelInfo:
+				log.Info().Fields(data).Msg(msg)
+			case tracelog.LogLevelWarn:
+				log.Warn().Fields(data).Msg(msg)
+			case tracelog.LogLevelError:
+				log.Error().Fields(data).Msg(msg)
+			}
+		}),
+		LogLevel: tracelog.LogLevelInfo,
+	}
 	cfg.MaxConns = 10
 	cfg.MinConns = 2
 	cfg.MaxConnIdleTime = 5 * time.Minute

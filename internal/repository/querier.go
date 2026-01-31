@@ -6,19 +6,21 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Querier interface {
 	AddCategory(ctx context.Context, arg AddCategoryParams) error
 	AddProduct(ctx context.Context, arg AddProductParams) error
-	DeleteCategoryById(ctx context.Context, id string) error
-	DeleteProductById(ctx context.Context, id int64) error
+	DeleteCategoryById(ctx context.Context, id string) (pgconn.CommandTag, error)
+	DeleteProductById(ctx context.Context, id int64) (pgconn.CommandTag, error)
 	GetAllCategories(ctx context.Context) ([]GetAllCategoriesRow, error)
 	GetAllProducts(ctx context.Context) ([]GetAllProductsRow, error)
 	GetCategoryById(ctx context.Context, id string) (GetCategoryByIdRow, error)
 	GetProductById(ctx context.Context, id int64) (GetProductByIdRow, error)
-	UpdateCategoryById(ctx context.Context, arg UpdateCategoryByIdParams) error
-	UpdateProductById(ctx context.Context, arg UpdateProductByIdParams) error
+	UpdateCategoryById(ctx context.Context, arg UpdateCategoryByIdParams) (pgconn.CommandTag, error)
+	UpdateProductById(ctx context.Context, arg UpdateProductByIdParams) (pgconn.CommandTag, error)
 }
 
 var _ Querier = (*Queries)(nil)

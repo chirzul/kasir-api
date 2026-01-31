@@ -18,13 +18,14 @@ WHERE id = $1;
 INSERT INTO categories (id, name, description)
 VALUES ($1, $2, $3);
 
--- name: UpdateCategoryById :exec
+-- name: UpdateCategoryById :execresult
 UPDATE categories
 SET
-  name = COALESCE(sqlc.narg(name), name),
-  description = COALESCE(sqlc.narg(description), description)
-WHERE id = $1;
+  name = $1,
+  description = $2,
+  updated_at = now()
+WHERE id = $3;
 
--- name: DeleteCategoryById :exec
+-- name: DeleteCategoryById :execresult
 DELETE FROM categories
 WHERE id = $1;
