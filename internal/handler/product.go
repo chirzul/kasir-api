@@ -93,6 +93,18 @@ func (h *ProductHandler) GetProductByID(c fiber.Ctx) error {
 	})
 }
 
+// AddProduct godoc
+//
+//	@Summary		Add product
+//	@Description	add new product
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			req	body		dto.AddProductRequest	true	"Product Request"
+//	@Success		201	{object}	dto.SuccessResponse{data=nil}
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		500	{object}	dto.ErrorResponse
+//	@Router			/products [post]
 func (h *ProductHandler) AddProduct(c fiber.Ctx) error {
 	var req dto.AddProductRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -116,6 +128,19 @@ func (h *ProductHandler) AddProduct(c fiber.Ctx) error {
 	})
 }
 
+// UpdateProductById godoc
+//
+//	@Summary		Update product
+//	@Description	update product data
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			req	body		dto.UpdateProductRequest	true	"Product Request"
+//	@Param			id	path		int							true	"Product ID"
+//	@Success		201	{object}	dto.SuccessResponse{data=nil}
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		500	{object}	dto.ErrorResponse
+//	@Router			/products/{id} [put]
 func (h *ProductHandler) UpdateProductByID(c fiber.Ctx) error {
 	var req dto.UpdateProductRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -140,6 +165,18 @@ func (h *ProductHandler) UpdateProductByID(c fiber.Ctx) error {
 	})
 }
 
+// DeleteProductByID godoc
+//
+//	@Summary		Delete product
+//	@Description	delete product by id
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Product ID"
+//	@Success		200	{object}	dto.SuccessResponse{data=nil}
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		500	{object}	dto.ErrorResponse
+//	@Router			/products/{id} [delete]
 func (h *ProductHandler) DeleteProductByID(c fiber.Ctx) error {
 	id := c.Params("id")
 

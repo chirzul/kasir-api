@@ -1,9 +1,9 @@
 package dto
 
 type ErrorResponse struct {
-	StatusCode int     `json:"statusCode"`
-	StatusDesc string  `json:"statusDesc"`
-	Error      *string `json:"error"`
+	StatusCode int    `json:"statusCode"`
+	StatusDesc string `json:"statusDesc"`
+	Error      string `json:"error"`
 }
 
 type SuccessResponse struct {
