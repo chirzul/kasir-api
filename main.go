@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "kasir-api/docs"
 	"kasir-api/internal/config"
 	"kasir-api/internal/database"
 	"kasir-api/internal/handler"
@@ -13,11 +14,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/swagger/v2"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
+// @title			Kasir API
+// @version		1.0
+// @description	This is API documentation for kasir-api
+// @BasePath		/api/v1
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out: os.Stdout,
@@ -35,6 +41,7 @@ func main() {
 	defer pool.Close()
 
 	app := fiber.New()
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	repository := repository.New(pool)
 

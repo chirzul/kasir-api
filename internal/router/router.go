@@ -3,7 +3,7 @@ package router
 import (
 	"kasir-api/internal/handler"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type Handlers struct {

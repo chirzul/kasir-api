@@ -1,5 +1,17 @@
 package dto
 
+type ErrorResponse struct {
+	StatusCode int     `json:"statusCode"`
+	StatusDesc string  `json:"statusDesc"`
+	Error      *string `json:"error"`
+}
+
+type SuccessResponse struct {
+	StatusCode int    `json:"statusCode"`
+	StatusDesc string `json:"statusDesc"`
+	Data       any    `json:"data,omitempty"`
+}
+
 type ProductResponse struct {
 	ID           int64   `json:"id"`
 	Name         string  `json:"name"`

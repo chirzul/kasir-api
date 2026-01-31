@@ -6,7 +6,7 @@ import (
 	"kasir-api/internal/pkg/utils"
 	"kasir-api/internal/service"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -18,8 +18,8 @@ func NewCategoryHandler(s service.CategoryService) *CategoryHandler {
 	return &CategoryHandler{service: s}
 }
 
-func (h *CategoryHandler) GetAllCategories(c *fiber.Ctx) error {
-	categories, err := h.service.GetAllCategories(c.Context())
+func (h *CategoryHandler) GetAllCategories(c fiber.Ctx) error {
+	categories, err := h.service.GetAllCategories(c.RequestCtx())
 	if errors.Is(err, utils.ErrNotFound) {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"statusCode": fiber.StatusNotFound,
@@ -42,10 +42,10 @@ func (h *CategoryHandler) GetAllCategories(c *fiber.Ctx) error {
 	})
 }
 
-func (h *CategoryHandler) GetCategoryByID(c *fiber.Ctx) error {
+func (h *CategoryHandler) GetCategoryByID(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	category, err := h.service.GetCategoryById(c.Context(), id)
+	category, err := h.service.GetCategoryById(c.RequestCtx(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, utils.ErrNotFound):
@@ -70,9 +70,9 @@ func (h *CategoryHandler) GetCategoryByID(c *fiber.Ctx) error {
 	})
 }
 
-func (h *CategoryHandler) AddCategory(c *fiber.Ctx) error {
+func (h *CategoryHandler) AddCategory(c fiber.Ctx) error {
 	var req dto.AddCategoryRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"statusCode": fiber.StatusBadRequest,
 			"statusDesc": "BAD_REQUEST",
@@ -80,7 +80,7 @@ func (h *CategoryHandler) AddCategory(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.service.AddCategory(c.Context(), req); err != nil {
+	if err := h.service.AddCategory(c.RequestCtx(), req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"statusCode": fiber.StatusInternalServerError,
 			"statusDesc": "INTERNAL_SERVER_ERROR",
@@ -93,9 +93,9 @@ func (h *CategoryHandler) AddCategory(c *fiber.Ctx) error {
 	})
 }
 
-func (h *CategoryHandler) UpdateCategoryByID(c *fiber.Ctx) error {
+func (h *CategoryHandler) UpdateCategoryByID(c fiber.Ctx) error {
 	var req dto.UpdateCategoryRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"statusCode": fiber.StatusBadRequest,
 			"statusDesc": "BAD_REQUEST",
@@ -104,7 +104,7 @@ func (h *CategoryHandler) UpdateCategoryByID(c *fiber.Ctx) error {
 	}
 
 	req.ID = c.Params("id")
-	if err := h.service.UpdateCategoryById(c.Context(), req); err != nil {
+	if err := h.service.UpdateCategoryById(c.RequestCtx(), req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"statusCode": fiber.StatusInternalServerError,
 			"statusDesc": "INTERNAL_SERVER_ERROR",
@@ -117,10 +117,10 @@ func (h *CategoryHandler) UpdateCategoryByID(c *fiber.Ctx) error {
 	})
 }
 
-func (h *CategoryHandler) DeleteCategoryByID(c *fiber.Ctx) error {
+func (h *CategoryHandler) DeleteCategoryByID(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := h.service.DeleteCategoryById(c.Context(), id)
+	err := h.service.DeleteCategoryById(c.RequestCtx(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -143,3 +143,5 @@ func (h *CategoryHandler) DeleteCategoryByID(c *fiber.Ctx) error {
 		"statusDesc": "OK",
 	})
 }
+
+// fiber:context-methods migrated

@@ -6,7 +6,7 @@ import (
 	"kasir-api/internal/pkg/utils"
 	"kasir-api/internal/service"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -18,8 +18,19 @@ func NewProductHandler(s service.ProductService) *ProductHandler {
 	return &ProductHandler{service: s}
 }
 
-func (h *ProductHandler) GetAllProducts(c *fiber.Ctx) error {
-	products, err := h.service.GetAllProducts(c.Context())
+// GetAllProducts godoc
+//
+//	@Summary		List products
+//	@Description	get list products
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	dto.SuccessResponse{data=[]dto.ProductResponse}
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		500	{object}	dto.ErrorResponse
+//	@Router			/products [get]
+func (h *ProductHandler) GetAllProducts(c fiber.Ctx) error {
+	products, err := h.service.GetAllProducts(c.RequestCtx())
 	if errors.Is(err, utils.ErrNotFound) {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"statusCode": fiber.StatusNotFound,
@@ -42,10 +53,22 @@ func (h *ProductHandler) GetAllProducts(c *fiber.Ctx) error {
 	})
 }
 
-func (h *ProductHandler) GetProductByID(c *fiber.Ctx) error {
+// GetProductByID godoc
+//
+//	@Summary		Detail product
+//	@Description	get detail product
+//	@Tags			products
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Product ID"
+//	@Success		200	{object}	dto.SuccessResponse{data=dto.ProductResponse}
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		500	{object}	dto.ErrorResponse
+//	@Router			/products/{id} [get]
+func (h *ProductHandler) GetProductByID(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	product, err := h.service.GetProductById(c.Context(), id)
+	product, err := h.service.GetProductById(c.RequestCtx(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, utils.ErrNotFound):
@@ -70,9 +93,9 @@ func (h *ProductHandler) GetProductByID(c *fiber.Ctx) error {
 	})
 }
 
-func (h *ProductHandler) AddProduct(c *fiber.Ctx) error {
+func (h *ProductHandler) AddProduct(c fiber.Ctx) error {
 	var req dto.AddProductRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"statusCode": fiber.StatusBadRequest,
 			"statusDesc": "BAD_REQUEST",
@@ -80,7 +103,7 @@ func (h *ProductHandler) AddProduct(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := h.service.AddProduct(c.Context(), req); err != nil {
+	if err := h.service.AddProduct(c.RequestCtx(), req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"statusCode": fiber.StatusInternalServerError,
 			"statusDesc": "INTERNAL_SERVER_ERROR",
@@ -93,9 +116,9 @@ func (h *ProductHandler) AddProduct(c *fiber.Ctx) error {
 	})
 }
 
-func (h *ProductHandler) UpdateProductByID(c *fiber.Ctx) error {
+func (h *ProductHandler) UpdateProductByID(c fiber.Ctx) error {
 	var req dto.UpdateProductRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"statusCode": fiber.StatusBadRequest,
 			"statusDesc": "BAD_REQUEST",
@@ -104,7 +127,7 @@ func (h *ProductHandler) UpdateProductByID(c *fiber.Ctx) error {
 	}
 
 	req.ID = c.Params("id")
-	if err := h.service.UpdateProductById(c.Context(), req); err != nil {
+	if err := h.service.UpdateProductById(c.RequestCtx(), req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"statusCode": fiber.StatusInternalServerError,
 			"statusDesc": "INTERNAL_SERVER_ERROR",
@@ -117,10 +140,10 @@ func (h *ProductHandler) UpdateProductByID(c *fiber.Ctx) error {
 	})
 }
 
-func (h *ProductHandler) DeleteProductByID(c *fiber.Ctx) error {
+func (h *ProductHandler) DeleteProductByID(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := h.service.DeleteProductById(c.Context(), id)
+	err := h.service.DeleteProductById(c.RequestCtx(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -143,3 +166,5 @@ func (h *ProductHandler) DeleteProductByID(c *fiber.Ctx) error {
 		"statusDesc": "OK",
 	})
 }
+
+// fiber:context-methods migrated
