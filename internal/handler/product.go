@@ -203,5 +203,3 @@ func (h *ProductHandler) DeleteProductByID(c fiber.Ctx) error {
 		"statusDesc": "OK",
 	})
 }
-
-// fiber:context-methods migrated

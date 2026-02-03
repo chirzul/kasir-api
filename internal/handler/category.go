@@ -203,5 +203,3 @@ func (h *CategoryHandler) DeleteCategoryByID(c fiber.Ctx) error {
 		"statusDesc": "OK",
 	})
 }
-
-// fiber:context-methods migrated
